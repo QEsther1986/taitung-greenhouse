@@ -8,7 +8,7 @@ const SHEET_ID = '1fLMEEOuqD9xsCVAWC6XDHVEXv7FM1-supUbjIkEzKTI'; // 老屋專屬
 
 // 空房管理日曆：留空字串 = 使用您 Google 帳號的預設日曆（零設定）。
 // 若之後建立專用日曆，把日曆 ID 貼進來即可。
-const CALENDAR_ID = '';
+const CALENDAR_ID = 'be25872ecdbdbb55673dce571584645d609b5dcb486aa6eaf6a81994d81ea4c1@group.calendar.google.com';
 
 /* ═══════════ 路由 ═══════════ */
 
@@ -196,6 +196,36 @@ function submitBooking(d) {
   const tierLabel = { sub: '訂閱8折', expired: '訂閱到期原價', pending: '對帳中原價', basic: '一般會員原價' };
   const roomInfo = d.roomType + '｜' + (tierLabel[d.memberTier] || '原價');
 
+  // ── 新增:負餘額(欠款中)擋訂房 ──
+  if (memberRow === -1) {
+    return { ok: false, message: '查無會員資料,請重新登入。' };
+  }
+  if (balanceBefore < 0) {
+    return { ok: false, message: `您有未補足的房費 ${-balanceBefore} 元,請先補款後再訂房。` };
+  }
+
+  // 餘額為正,正常扣款(可扣成負數)
+  balanceAfter = balanceBefore - (Number(d.amount) || 0);
+  sheet.getRange(memberRow + 1, 7).setValue(balanceAfter);
+
+  bookingSheet().appendRow([
+    new Date(), d.name, d.checkIn, d.checkOut, roomInfo,
+    Number(d.adults) || 0, Number(d.kids) || 0,
+    Number(d.amount) || 0, '待確認', '未派發',
+  ]);
+  calendar().createAllDayEvent(
+    `【訂房|${d.roomType}】${d.name} ${d.party}`,
+    new Date(d.checkIn), new Date(d.checkOut)
+  );
+
+  return {
+    ok: true,
+    amount: Number(d.amount) || 0,
+    balanceAfter: balanceAfter,
+    shortfall: balanceAfter < 0 ? -balanceAfter : 0,
+  };
+
+  /*
   bookingSheet().appendRow([
     new Date(),                                      // 申請時間
     d.name,                                          // 預約會員姓名
@@ -213,6 +243,7 @@ function submitBooking(d) {
     new Date(d.checkIn), new Date(d.checkOut)
   );
   return { ok: true };
+  */
 }
 
 /* ═══════════ 入會 / 匯款回報 ═══════════ */
@@ -232,6 +263,7 @@ function submitTopup(d) {
         (rows[i][8] ? rows[i][8] + '\n' : '') +
         `[${Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd')} 匯款回報] 後五碼 ${d.last5}｜${d.note || ''}`
       );
+      notifyTopup(d, false); //通知已匯款要查帳
       return { ok: true };
     }
   }
@@ -255,4 +287,21 @@ function submitTopup(d) {
     Utilities.formatDate(expiry, 'Asia/Taipei', 'yyyy-MM'),
   ]);
   return { ok: true };
+}
+
+/* ═══════════ 匯款回報通知管家 ═══════════ */
+function notifyTopup(d, isNew) {
+  const to = Session.getEffectiveUser().getEmail();  // 寄給你自己(部署帳號)
+  const subject = `💰 匯款回報：${d.name}（後五碼 ${d.last5}）`;
+  const body =
+    `有一筆匯款回報,請查帳核對:\n\n` +
+    `姓名:${d.name}\n` +
+    `LINE:${d.lineName || '(未填)'}\n` +
+    `手機:${d.phone}\n` +
+    `匯款後五碼:${d.last5}\n` +
+    `類型:${isNew ? '新入會' : '既有會員補款/續約'}\n` +
+    `備註:${d.note || '(無)'}\n` +
+    `時間:${Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm')}\n\n` +
+    `請至後台資料庫核對後,將該會員狀態改為「已開通」、餘額填入。`;
+  MailApp.sendEmail(to, subject, body);
 }
