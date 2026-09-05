@@ -91,9 +91,42 @@
           </form>
 
           <div class="mt-5 pt-4 border-t border-line text-sm text-soil leading-relaxed">
-            還不是會員嗎？前往
-            <button class="text-wood font-medium underline underline-offset-2" onclick="go('payment')">入會與匯款回報</button>
-            加入創始家庭。
+            還沒有帳號嗎？<button class="text-wood font-medium underline underline-offset-2" onclick="showAuth('register')">免費註冊會員</button><br>
+            <span class="text-xs">訂房需要會員帳號；訂閱制會員另享 8 折優惠。</span>
+          </div>
+        </div>
+
+        <!-- 未登入：免費註冊卡片 -->
+        <div id="register-card" class="hidden bg-white rounded-card border border-line shadow-sm p-6">
+          <h2 class="font-serif text-lg font-bold">免費註冊會員</h2>
+          <p class="text-sm text-soil mt-1 leading-relaxed">建立帳號即可訂房（原價）。<br>升級<span class="text-wood font-medium">訂閱制會員</span>（年費 3,000 轉儲值金）訂房享 8 折。</p>
+
+          <form id="register-form" class="mt-5 space-y-4" novalidate>
+            <div>
+              <label for="r-name" class="block text-sm font-medium mb-1.5">真實姓名 <span class="text-red-500">*</span></label>
+              <input id="r-name" type="text" required autocomplete="name" placeholder="訂房與聯繫用"
+                     class="w-full rounded-xl border border-line bg-paper px-4 py-3 focus:outline-none focus:ring-2 focus:ring-wood/40 focus:border-wood" />
+            </div>
+            <div>
+              <label for="r-line" class="block text-sm font-medium mb-1.5">LINE 暱稱 <span class="text-red-500">*</span></label>
+              <input id="r-line" type="text" required placeholder="方便管家在 LINE 上認出您"
+                     class="w-full rounded-xl border border-line bg-paper px-4 py-3 focus:outline-none focus:ring-2 focus:ring-wood/40 focus:border-wood" />
+            </div>
+            <div>
+              <label for="r-phone" class="block text-sm font-medium mb-1.5">手機號碼 <span class="text-red-500">*</span></label>
+              <input id="r-phone" type="tel" required inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="0912345678"
+                     class="w-full rounded-xl border border-line bg-paper px-4 py-3 tracking-wide focus:outline-none focus:ring-2 focus:ring-wood/40 focus:border-wood" />
+              <p class="text-xs text-soil mt-1">這是您之後的登入帳號。</p>
+            </div>
+            <p id="register-error" class="hidden text-sm text-red-600"></p>
+            <button type="submit" id="register-btn"
+                    class="w-full rounded-xl bg-wood text-white font-medium py-3.5 active:bg-woodDk transition disabled:opacity-50">
+              建立會員帳號
+            </button>
+          </form>
+
+          <div class="mt-5 pt-4 border-t border-line text-sm text-soil">
+            已經有帳號？<button class="text-wood font-medium underline underline-offset-2" onclick="showAuth('login')">回到登入</button>
           </div>
         </div>
 
@@ -166,12 +199,7 @@
           <div id="strip-member" class="hidden rounded-xl bg-mossBg border border-moss/30 px-4 py-3 text-sm text-moss flex items-center gap-2">
             <span>🌿</span><span id="strip-member-text">會員價 8 折已套用</span>
           </div>
-          <div id="strip-guest" class="hidden rounded-xl bg-sand border border-line px-4 py-3 text-sm text-ink leading-relaxed">
-            目前以<b>非會員原價</b>試算。訂閱制會員享 <b class="text-wood">8 折</b>，
-            <button class="text-wood font-medium underline underline-offset-2" onclick="go('dashboard')">登入會員</button>
-            或
-            <button class="text-wood font-medium underline underline-offset-2" onclick="go('payment')">立即入會</button>。
-          </div>
+          <div id="strip-guest" class="hidden rounded-xl bg-sand border border-line px-4 py-3 text-sm text-ink leading-relaxed"></div>
 
           <!-- 步驟一：選擇日期 -->
           <div class="bg-white rounded-card border border-line p-5">
@@ -268,21 +296,6 @@
             </div>
           </div>
 
-          <!-- 非會員：聯絡資料 -->
-          <div id="guest-contact" class="hidden bg-white rounded-card border border-line p-5 space-y-4">
-            <h2 class="font-serif font-bold">聯絡資料<span class="text-xs text-soil font-normal ml-2">非會員預約用</span></h2>
-            <div>
-              <label for="g-name" class="block text-sm font-medium mb-1.5">姓名 <span class="text-red-500">*</span></label>
-              <input id="g-name" type="text" autocomplete="name" placeholder="您的稱呼"
-                     class="w-full rounded-xl border border-line bg-paper px-4 py-3 focus:outline-none focus:ring-2 focus:ring-wood/40 focus:border-wood" />
-            </div>
-            <div>
-              <label for="g-phone" class="block text-sm font-medium mb-1.5">手機號碼 <span class="text-red-500">*</span></label>
-              <input id="g-phone" type="tel" inputmode="numeric" maxlength="10" autocomplete="tel" placeholder="0912345678"
-                     class="w-full rounded-xl border border-line bg-paper px-4 py-3 tracking-wide focus:outline-none focus:ring-2 focus:ring-wood/40 focus:border-wood" />
-            </div>
-          </div>
-
           <!-- 費用試算與送出 -->
           <div class="bg-white rounded-card border border-line p-5">
             <h2 class="font-serif font-bold">房費試算</h2>
@@ -345,10 +358,10 @@
 
           <!-- 入會說明 -->
           <div class="rounded-card bg-sand border border-line p-5">
-            <h2 class="font-serif text-lg font-bold">加入創始家庭</h2>
+            <h2 class="font-serif text-lg font-bold">升級訂閱制會員</h2>
             <p class="text-sm text-soil mt-1.5 leading-relaxed">
-              繳交年度會費 <span class="font-serif font-bold text-wood text-base">NT$ 3,000</span>（全額轉為儲值金），
-              效期一年，訂房時直接由餘額扣款。
+              年度會費 <span class="font-serif font-bold text-wood text-base">NT$ 3,000</span>（全額轉為儲值金），
+              效期一年，訂房享 <b class="text-wood">8 折</b>並直接由餘額扣款。續約也走此流程。
             </p>
             <ol class="mt-3 space-y-1.5 text-sm leading-relaxed">
               <li class="flex gap-2"><span class="text-wood font-bold">1.</span>匯款至下方帳戶</li>
@@ -527,7 +540,8 @@
     const DEMO_MEMBER = {
       memberId: 'F-2026-007',
       name: '陳美惠',
-      status: '已開通',            // 待確認 | 已開通
+      lineName: '美惠媽咪',
+      status: '已開通',            // 一般會員 | 待確認 | 已開通
       balance: 2200,
       expiryMonth: '2027-03',
       records: [
@@ -591,6 +605,22 @@
       return res.json();
     }
 
+    async function apiRegister(payload) {
+      if (!CONFIG.API_URL) {                       // 展示模式：直接回傳一般會員
+        await new Promise(r => setTimeout(r, 600));
+        return { ok: true, member: {
+          memberId: 'M016', name: payload.name, lineName: payload.lineName,
+          status: '一般會員', balance: 0, expiryMonth: '', records: [],
+        }};
+      }
+      const res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'register', data: payload }),
+      });
+      return res.json();
+    }
+
     async function apiSubmitTopup(payload) {
       if (!CONFIG.API_URL) {                       // 展示模式
         await new Promise(r => setTimeout(r, 800));
@@ -616,6 +646,13 @@
       });
       window.scrollTo({ top: 0 });
       if (page === 'booking') initBookingPage();
+      if (page === 'payment' && currentMember) {
+        // 已登入：自動帶入基本資料，少打幾個字
+        const setIfEmpty = (id, v) => { const el = document.getElementById(id); if (el && !el.value && v) el.value = v; };
+        setIfEmpty('f-name', currentMember.name);
+        setIfEmpty('f-line', currentMember.lineName);
+        setIfEmpty('f-phone', localStorage.getItem('memberPhone'));
+      }
     }
 
     /* ───────── 小工具 ───────── */
@@ -640,7 +677,61 @@
     const fmtMonth = m => { const [y, mo] = String(m).split('-'); return `${y} 年 ${Number(mo)} 月`; };
     const toISO = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    /* ───────── 儀表板：登入與渲染 ───────── */
+    /* ───────── 儀表板：登入 / 註冊 / 渲染 ───────── */
+    // 會員層級：sub=訂閱生效 / expired=訂閱到期 / pending=對帳中 / basic=一般會員
+    function memberTier(m) {
+      if (!m) return null;
+      if (m.status === '已開通') {
+        if (m.expiryMonth && /^\d{4}-\d{2}$/.test(String(m.expiryMonth))) {
+          const end = new Date(m.expiryMonth + '-01');
+          end.setMonth(end.getMonth() + 1);        // 到期月份算到月底
+          if (end <= new Date()) return 'expired';
+        }
+        return 'sub';
+      }
+      if (m.status === '待確認') return 'pending';
+      return 'basic';
+    }
+
+    function showAuth(which) {
+      document.getElementById('login-card').classList.toggle('hidden', which !== 'login');
+      document.getElementById('register-card').classList.toggle('hidden', which !== 'register');
+    }
+
+    document.getElementById('register-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('register-error');
+      err.classList.add('hidden');
+      const payload = {
+        name: document.getElementById('r-name').value.trim(),
+        lineName: document.getElementById('r-line').value.trim(),
+        phone: document.getElementById('r-phone').value.trim(),
+      };
+      let problem = '';
+      if (!payload.name) problem = '請填寫真實姓名。';
+      else if (!payload.lineName) problem = '請填寫 LINE 暱稱。';
+      else if (!isValidPhone(payload.phone)) problem = '請輸入 09 開頭的 10 碼手機號碼。';
+      if (problem) { err.textContent = problem; err.classList.remove('hidden'); return; }
+
+      const btn = document.getElementById('register-btn');
+      btn.disabled = true; btn.textContent = '建立中⋯';
+      try {
+        const resp = await apiRegister(payload);
+        if (resp.ok && resp.member) {
+          localStorage.setItem('memberPhone', payload.phone);
+          document.getElementById('register-card').classList.add('hidden');
+          renderMember(resp.member);
+        } else {
+          err.textContent = resp.message || '註冊失敗，請稍後再試。';
+          err.classList.remove('hidden');
+        }
+      } catch {
+        err.textContent = '連線失敗，請稍後再試。';
+        err.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.textContent = '建立會員帳號';
+    });
+
     document.getElementById('login-form').addEventListener('submit', async e => {
       e.preventDefault();
       const phone = document.getElementById('login-phone').value.trim();
@@ -677,30 +768,49 @@
     function renderMember(m) {
       currentMember = m;
       document.getElementById('login-card').classList.add('hidden');
+      document.getElementById('register-card').classList.add('hidden');
       document.getElementById('member-panel').classList.remove('hidden');
 
+      const tier = memberTier(m);
       document.getElementById('m-name').textContent    = m.name;
       document.getElementById('m-id').textContent      = m.memberId || '—';
-      document.getElementById('m-balance').textContent = fmtMoney(m.balance);
-      document.getElementById('m-expiry').textContent  = fmtMonth(m.expiryMonth);
+      document.getElementById('m-balance').textContent = fmtMoney(m.balance || 0);
+      document.getElementById('m-expiry').textContent  =
+        (tier === 'sub' || tier === 'expired') && m.expiryMonth ? fmtMonth(m.expiryMonth) : '—';
 
       const badge = document.getElementById('m-status');
-      badge.textContent = m.status;
-      badge.className = 'text-xs px-2.5 py-1 rounded-full ' +
-        (m.status === '已開通' ? 'bg-white/25' : 'bg-yellow-400/90 text-ink');
+      const badgeMap = {
+        sub:     ['🌿 訂閱制會員', 'bg-white/25'],
+        expired: ['訂閱已到期',   'bg-yellow-400/90 text-ink'],
+        pending: ['訂閱審核中',   'bg-yellow-400/90 text-ink'],
+        basic:   ['一般會員',     'bg-white/20'],
+      };
+      badge.textContent = badgeMap[tier][0];
+      badge.className = 'text-xs px-2.5 py-1 rounded-full ' + badgeMap[tier][1];
 
-      // 效期 60 天內提醒續約
+      // 提示區：依身分顯示升級 / 續約 / 到期提醒
       const hint = document.getElementById('m-expiry-hint');
-      const expiry = new Date(m.expiryMonth + '-01');
-      expiry.setMonth(expiry.getMonth() + 1);        // 到期「月份」算到月底
-      const daysLeft = Math.ceil((expiry - Date.now()) / 86400000);
-      if (daysLeft <= 60) {
-        hint.textContent = daysLeft > 0
-          ? `⏰ 會員效期剩下約 ${daysLeft} 天，記得續約，讓老屋繼續留一盞燈給您。`
-          : '會員效期已屆，歡迎前往「入會匯款」頁完成續約。';
+      const upgradeBtn = '<button class="text-wood font-medium underline underline-offset-2" onclick="go(\'payment\')">前往入會匯款</button>';
+      if (tier === 'basic') {
+        hint.innerHTML = `🌿 升級<b>訂閱制會員</b>：年費 3,000 全額轉為儲值金，訂房享 <b class="text-wood">8 折</b>。${upgradeBtn}`;
+        hint.classList.remove('hidden');
+      } else if (tier === 'expired') {
+        hint.innerHTML = `⏰ 您的訂閱已到期，續約後恢復 8 折與儲值扣款。${upgradeBtn}`;
+        hint.classList.remove('hidden');
+      } else if (tier === 'pending') {
+        hint.innerHTML = '⏳ 會費對帳中，開通後即享 8 折，管家會透過 LINE 通知您。';
         hint.classList.remove('hidden');
       } else {
-        hint.classList.add('hidden');
+        // 訂閱生效：效期 60 天內提醒續約
+        const expiry = new Date(m.expiryMonth + '-01');
+        expiry.setMonth(expiry.getMonth() + 1);      // 到期「月份」算到月底
+        const daysLeft = Math.ceil((expiry - Date.now()) / 86400000);
+        if (daysLeft <= 60) {
+          hint.innerHTML = `⏰ 訂閱效期剩下約 ${daysLeft} 天，記得續約，讓老屋繼續留一盞燈給您。${upgradeBtn}`;
+          hint.classList.remove('hidden');
+        } else {
+          hint.classList.add('hidden');
+        }
       }
 
       // 訂房紀錄
@@ -726,7 +836,7 @@
       currentMember = null;
       localStorage.removeItem('memberPhone');
       document.getElementById('member-panel').classList.add('hidden');
-      document.getElementById('login-card').classList.remove('hidden');
+      showAuth('login');
       document.getElementById('login-phone').value = '';
       resetBooking();
     }
@@ -758,8 +868,8 @@
     // 包棟需五間房都開放才提供
     const wholeHouseOffered = () => !isClosed('包棟') && regularRooms().every(r => !isClosed(r.id));
 
-    // 會員 8 折資格：已登入且會費已開通
-    const memberDiscountActive = () => !!(currentMember && currentMember.status === '已開通');
+    // 8 折資格：訂閱制會員且效期內
+    const memberDiscountActive = () => memberTier(currentMember) === 'sub';
 
     async function initBookingPage() {
       if (!roomsLoaded) {
@@ -771,14 +881,19 @@
         if (cal.roomId && isClosed(cal.roomId)) cal.roomId = null;
       }
       // 身分提示條
-      const isMember = memberDiscountActive();
-      document.getElementById('strip-member').classList.toggle('hidden', !isMember);
-      document.getElementById('strip-guest').classList.toggle('hidden', isMember);
-      if (currentMember && !isMember) {
-        document.getElementById('strip-guest').innerHTML =
-          '您的會費尚在對帳中，開通後即享 <b class="text-wood">8 折</b>，目前先以原價試算。';
+      const tier = memberTier(currentMember);
+      document.getElementById('strip-member').classList.toggle('hidden', tier !== 'sub');
+      const guest = document.getElementById('strip-guest');
+      guest.classList.toggle('hidden', tier === 'sub');
+      if (tier === 'pending') {
+        guest.innerHTML = '⏳ 您的會費尚在對帳中，開通後即享 <b class="text-wood">8 折</b>，目前先以原價試算。';
+      } else if (tier === 'expired') {
+        guest.innerHTML = '⏰ 您的訂閱已到期，目前以原價試算。<button class="text-wood font-medium underline underline-offset-2" onclick="go(\'payment\')">續約</button>後恢復 8 折。';
+      } else if (tier === 'basic') {
+        guest.innerHTML = '您目前是<b>一般會員</b>（原價）。升級<b>訂閱制</b>享 <b class="text-wood">8 折</b>，<button class="text-wood font-medium underline underline-offset-2" onclick="go(\'payment\')">前往入會匯款</button>。';
+      } else {
+        guest.innerHTML = '訂房需要會員帳號：<button class="text-wood font-medium underline underline-offset-2" onclick="go(\'dashboard\')">登入</button>或<button class="text-wood font-medium underline underline-offset-2" onclick="goRegister()">免費註冊</button>。訂閱制會員享 <b class="text-wood">8 折</b>。';
       }
-      document.getElementById('guest-contact').classList.toggle('hidden', !!currentMember);
       document.getElementById('booking-flow').classList.remove('hidden');
       document.getElementById('booking-success').classList.add('hidden');
 
@@ -1034,13 +1149,14 @@
 
       document.getElementById('sum-amount').textContent = s.amount ? fmtMoney(s.amount) : '—';
 
-      // 會員才顯示儲值餘額
+      // 訂閱制會員才顯示儲值餘額
+      const isSub = memberDiscountActive();
       const balRow = document.getElementById('sum-balance-row');
-      balRow.classList.toggle('hidden', !currentMember);
-      if (currentMember)
+      balRow.classList.toggle('hidden', !isSub);
+      if (isSub)
         document.getElementById('sum-balance').textContent = `${fmtMoney(currentMember.balance)} 元`;
 
-      document.getElementById('booking-footnote').innerHTML = currentMember
+      document.getElementById('booking-footnote').innerHTML = isSub
         ? '送出後管家將確認並由儲值餘額扣款，<br>入住前一日於 LINE 發送電子鎖密碼。'
         : '送出後管家將與您聯繫確認付款方式，<br>入住前一日於 LINE 發送電子鎖密碼。';
 
@@ -1049,12 +1165,18 @@
       const msgs = [];
       if (s.room && s.heads > s.room.max)
         msgs.push(`「${s.room.id}」${s.room.cap}，目前選了 ${s.heads} 位，管家會與您確認安排。`);
-      if (currentMember && s.amount > currentMember.balance)
+      if (isSub && s.amount > currentMember.balance)
         msgs.push(`本次房費超過儲值餘額，仍可送出預約，管家會透過 LINE 與您聯繫補儲值。`);
       warn.classList.toggle('hidden', msgs.length === 0);
       warn.innerHTML = msgs.map(m => `⚠️ ${m}`).join('<br>');
 
       document.getElementById('booking-btn').disabled = !(hasDates && s.room);
+    }
+
+    // 從訂房頁跳到註冊畫面
+    function goRegister() {
+      go('dashboard');
+      if (!currentMember) showAuth('register');
     }
 
     async function submitBooking() {
@@ -1063,24 +1185,21 @@
       err.classList.add('hidden');
       if (!s.room || !s.nights) return;
 
-      // 非會員需填聯絡資料
-      let name, phone;
-      if (currentMember) {
-        name = currentMember.name;
-        phone = localStorage.getItem('memberPhone') || '';
-      } else {
-        name = document.getElementById('g-name').value.trim();
-        phone = document.getElementById('g-phone').value.trim();
-        if (!name) { err.textContent = '請填寫姓名，方便管家與您聯繫。'; err.classList.remove('hidden'); return; }
-        if (!isValidPhone(phone)) { err.textContent = '請輸入 09 開頭的 10 碼手機號碼。'; err.classList.remove('hidden'); return; }
+      // 訂房一律需要會員帳號
+      if (!currentMember) {
+        err.innerHTML = '訂房需要會員帳號：請先<button class="font-medium underline underline-offset-2" onclick="go(\'dashboard\')">登入</button>或<button class="font-medium underline underline-offset-2" onclick="goRegister()">免費註冊</button>（免費，一分鐘完成）。';
+        err.classList.remove('hidden');
+        return;
       }
+      const name = currentMember.name;
+      const phone = localStorage.getItem('memberPhone') || '';
 
       const btn = document.getElementById('booking-btn');
       btn.disabled = true; btn.textContent = '送出中⋯';
       try {
         const resp = await apiSubmitBooking({
           phone, name,
-          isMember: !!currentMember,
+          memberTier: memberTier(currentMember),   // sub / expired / pending / basic
           discounted: s.discounted,
           checkIn: cal.start,
           checkOut: cal.end,

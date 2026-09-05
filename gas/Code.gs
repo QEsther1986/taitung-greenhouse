@@ -26,6 +26,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
+    if (body.action === 'register')      return json(registerMember(body.data));
     if (body.action === 'submitTopup')   return json(submitTopup(body.data));
     if (body.action === 'submitBooking') return json(submitBooking(body.data));
     return json({ ok: false, message: 'unknown action' });
@@ -85,14 +86,40 @@ function getMember(phone) {
       return { ok: true, member: {
         memberId:    String(rows[i][0]),
         name:        String(rows[i][1]),
-        status:      String(rows[i][5]) || '待確認',
+        lineName:    String(rows[i][2]),
+        // 一般會員（免費註冊）/ 待確認（會費對帳中）/ 已開通（訂閱制生效）
+        status:      String(rows[i][5]) || '一般會員',
         balance:     Number(rows[i][6]) || 0,
         expiryMonth: fmtMonth(rows[i][10]),
         records:     getRecords(String(rows[i][1])),
       }};
     }
   }
-  return { ok: false, message: '查無此會員，請確認號碼，或先完成入會匯款回報。' };
+  return { ok: false, message: '查無此帳號，請確認號碼，或先免費註冊會員。' };
+}
+
+/* ═══════════ 免費註冊（一般會員） ═══════════ */
+
+function registerMember(d) {
+  const sheet = memberSheet();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (digits(rows[i][3]) === digits(d.phone)) {
+      return { ok: false, message: '此手機號碼已註冊過，請直接以手機號碼登入。' };
+    }
+  }
+  const nextId = 'M' + String(rows.length).padStart(3, '0');
+  sheet.appendRow([
+    nextId, d.name, d.lineName, "'" + d.phone, '',
+    '一般會員',                     // 未訂閱；匯款回報後改為 待確認 → 已開通
+    0, '', '',
+    Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM'),
+    '',                             // 到期月份：訂閱開通時由管家填入
+  ]);
+  return { ok: true, member: {
+    memberId: nextId, name: d.name, lineName: d.lineName,
+    status: '一般會員', balance: 0, expiryMonth: '', records: [],
+  }};
 }
 
 // 訂房紀錄欄位（A~J）：
@@ -165,13 +192,13 @@ function getAvailability(from, to) {
 /* ═══════════ 送出訂房 ═══════════ */
 
 function submitBooking(d) {
-  // 房型欄記錄計價身分；非會員另附電話方便聯繫
-  let roomInfo = d.roomType + (d.discounted ? '｜會員8折' : '｜原價');
-  if (!d.isMember) roomInfo += '｜非會員 ' + d.phone;
+  // 房型欄記錄計價身分（訂閱8折 / 一般會員原價）
+  const tierLabel = { sub: '訂閱8折', expired: '訂閱到期原價', pending: '對帳中原價', basic: '一般會員原價' };
+  const roomInfo = d.roomType + '｜' + (tierLabel[d.memberTier] || '原價');
 
   bookingSheet().appendRow([
     new Date(),                                      // 申請時間
-    d.name + (d.isMember ? '' : '（非會員）'),        // 預約會員姓名
+    d.name,                                          // 預約會員姓名
     d.checkIn,                                       // 預計入住日期
     d.checkOut,                                      // 預計退房日期
     roomInfo,                                        // 訂購房型
@@ -194,9 +221,13 @@ function submitTopup(d) {
   const sheet = memberSheet();
   const rows = sheet.getDataRange().getValues();
 
-  // 同一支手機已存在 → 視為續約/補繳回報，不重複建檔
+  // 同一支手機已存在 → 一般會員升級訂閱 / 訂閱會員續約補繳，不重複建檔
   for (let i = 1; i < rows.length; i++) {
     if (digits(rows[i][3]) === digits(d.phone)) {
+      sheet.getRange(i + 1, 5).setValue("'" + d.last5);         // 更新後五碼
+      if (String(rows[i][5]) !== '已開通') {
+        sheet.getRange(i + 1, 6).setValue('待確認');            // 一般會員 → 進入對帳
+      }
       sheet.getRange(i + 1, 9).setValue(
         (rows[i][8] ? rows[i][8] + '\n' : '') +
         `[${Utilities.formatDate(new Date(), 'Asia/Taipei', 'MM/dd')} 匯款回報] 後五碼 ${d.last5}｜${d.note || ''}`
