@@ -105,45 +105,56 @@ function getRecords(name) {
     .map(r => ({
       checkIn:  fmtDate(r[2]),
       checkOut: fmtDate(r[3]),
-      party:    `${r[4]}・${r[5]}大${r[6]}小`,
+      party:    `${String(r[4]).split('｜')[0]}・${r[5]}大${r[6]}小`,
       amount:   Number(r[7]) || 0,
       status:   String(r[8]) || '待確認',
     }));
 }
 
-/* ═══════════ 空房查詢（Google 日曆） ═══════════ */
+/* ═══════════ 空房查詢（Google 日曆，每房各自計算） ═══════════ */
+// 事件標題格式：【訂房|房型】姓名 人數，例：【訂房|和室】陳美惠 2大1國小
+// 回傳 { ok: true, booked: { 房型: [日期...], ... } }
 
 function getAvailability(from, to) {
   const events = calendar().getEvents(new Date(from), new Date(to + 'T23:59:59'));
   const booked = {};
   events.forEach(ev => {
-    // 只看標題含【訂房】的事件，避免您日曆上的私人行程被誤判成客滿
-    if (ev.getTitle().indexOf('【訂房】') === -1) return;
-    // 事件每跨一晚就標成已滿；退房日早上不佔房
+    // 只看【訂房|房型】格式的事件，避免日曆上的私人行程被誤判成客滿
+    const m = ev.getTitle().match(/^【訂房\|([^】]+)】/);
+    if (!m) return;
+    const room = m[1];
+    // 事件每跨一晚就標成已訂；退房日早上不佔房
     for (let d = new Date(ev.getStartTime()); d < ev.getEndTime(); d.setDate(d.getDate() + 1)) {
-      booked[Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd')] = true;
+      const iso = Utilities.formatDate(d, 'Asia/Taipei', 'yyyy-MM-dd');
+      (booked[room] = booked[room] || {})[iso] = true;
     }
   });
-  return { ok: true, booked: Object.keys(booked).sort() };
+  const out = {};
+  Object.keys(booked).forEach(r => { out[r] = Object.keys(booked[r]).sort(); });
+  return { ok: true, booked: out };
 }
 
 /* ═══════════ 送出訂房 ═══════════ */
 
 function submitBooking(d) {
+  // 房型欄記錄計價身分；非會員另附電話方便聯繫
+  let roomInfo = d.roomType + (d.discounted ? '｜會員8折' : '｜原價');
+  if (!d.isMember) roomInfo += '｜非會員 ' + d.phone;
+
   bookingSheet().appendRow([
-    new Date(),                       // 申請時間
-    d.name,                           // 預約會員姓名
-    d.checkIn,                        // 預計入住日期
-    d.checkOut,                       // 預計退房日期
-    d.roomType,                       // 訂購房型
-    Number(d.adults) || 0,            // 人數(幾位大人)
-    Number(d.kids) || 0,              // 人數(幾位小孩)
-    Number(d.amount) || 0,            // 本次扣款金額
-    '待確認',                          // 對帳與確認狀態
-    '未派發',                          // 密碼派發狀態
+    new Date(),                                      // 申請時間
+    d.name + (d.isMember ? '' : '（非會員）'),        // 預約會員姓名
+    d.checkIn,                                       // 預計入住日期
+    d.checkOut,                                      // 預計退房日期
+    roomInfo,                                        // 訂購房型
+    Number(d.adults) || 0,                           // 人數(幾位大人)
+    Number(d.kids) || 0,                             // 人數(幾位小孩=國小+6歲以下)
+    Number(d.amount) || 0,                           // 本次扣款金額
+    '待確認',                                         // 對帳與確認狀態
+    '未派發',                                         // 密碼派發狀態
   ]);
   calendar().createAllDayEvent(
-    `【訂房】${d.name} ${d.roomType} ${d.party}`,
+    `【訂房|${d.roomType}】${d.name} ${d.party}`,
     new Date(d.checkIn), new Date(d.checkOut)
   );
   return { ok: true };
