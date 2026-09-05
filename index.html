@@ -196,6 +196,7 @@
         <div id="booking-flow" class="space-y-4">
 
           <!-- 會員身分提示條 -->
+          <div id="strip-owe" class="hidden rounded-xl bg-yellow-50 border border-yellow-200 px-4 py-3 text-sm text-yellow-800 leading-relaxed"></div>
           <div id="strip-member" class="hidden rounded-xl bg-mossBg border border-moss/30 px-4 py-3 text-sm text-moss flex items-center gap-2">
             <span>🌿</span><span id="strip-member-text">會員價 8 折已套用</span>
           </div>
@@ -880,6 +881,20 @@
         roomsLoaded = true;
         if (cal.roomId && isClosed(cal.roomId)) cal.roomId = null;
       }
+
+      // ── 新增:負餘額(欠款)擋訂房 ──
+      const owe = currentMember && (currentMember.balance || 0) < 0;
+      const oweBar = document.getElementById('strip-owe');
+      if (owe) {
+        oweBar.classList.remove('hidden');
+        oweBar.innerHTML =
+          `⚠️ 您目前有未補足的房費 <b class="tabular">${fmtMoney(-currentMember.balance)}</b> 元,` +
+          `請先<button class="text-wood font-medium underline underline-offset-2" onclick="go('payment')">前往補款</button>,` +
+          `補款確認後即可再次訂房。`;
+      } else {
+        oweBar.classList.add('hidden');
+      }
+      
       // 身分提示條
       const tier = memberTier(currentMember);
       document.getElementById('strip-member').classList.toggle('hidden', tier !== 'sub');
@@ -1170,6 +1185,7 @@
       warn.classList.toggle('hidden', msgs.length === 0);
       warn.innerHTML = msgs.map(m => `⚠️ ${m}`).join('<br>');
 
+      const owe = currentMember && (currentMember.balance || 0) < 0;
       document.getElementById('booking-btn').disabled = !(hasDates && s.room);
     }
 
@@ -1191,6 +1207,14 @@
         err.classList.remove('hidden');
         return;
       }
+
+      // ── 新增:負餘額擋送出 ──
+      if ((currentMember.balance || 0) < 0) {
+        err.innerHTML = `您有未補足的房費 ${fmtMoney(-currentMember.balance)} 元,請先<button class="font-medium underline underline-offset-2" onclick="go('payment')">前往補款</button>,補款確認後即可訂房。`;
+        err.classList.remove('hidden');
+        return;
+      }
+      
       const name = currentMember.name;
       const phone = localStorage.getItem('memberPhone') || '';
 
