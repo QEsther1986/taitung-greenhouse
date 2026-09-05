@@ -16,6 +16,7 @@ function doGet(e) {
   try {
     if (e.parameter.action === 'getMember')       return json(getMember(e.parameter.phone));
     if (e.parameter.action === 'getAvailability') return json(getAvailability(e.parameter.from, e.parameter.to));
+    if (e.parameter.action === 'getRooms')        return json(getRooms());
     return json({ ok: false, message: 'unknown action' });
   } catch (err) {
     return json({ ok: false, message: '系統錯誤：' + err.message });
@@ -111,6 +112,32 @@ function getRecords(name) {
     }));
 }
 
+/* ═══════════ 房型開放設定 ═══════════ */
+// 管理者在試算表「房型設定」分頁把狀態改成「關閉」，該房型即暫停開放。
+// 分頁不存在時第一次呼叫會自動建立（預設全部開放）。
+
+const ALL_ROOMS = ['和室', '套房', '雙人房・雙人床', '雙人房・兩單床', '四人房', '包棟'];
+
+function getRooms() {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sheet = null;
+  for (const s of ss.getSheets()) {
+    if (String(s.getRange(1, 1).getValue()).trim() === '房型') { sheet = s; break; }
+  }
+  if (!sheet) {
+    sheet = ss.insertSheet('房型設定');
+    sheet.appendRow(['房型', '狀態（開放/關閉）', '備註']);
+    ALL_ROOMS.forEach(r => sheet.appendRow([r, '開放', '']));
+    sheet.setFrozenRows(1);
+  }
+  const rows = sheet.getDataRange().getValues();
+  const closed = [];
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][1]).indexOf('關') !== -1) closed.push(String(rows[i][0]).trim());
+  }
+  return { ok: true, closed: closed };
+}
+
 /* ═══════════ 空房查詢（Google 日曆，每房各自計算） ═══════════ */
 // 事件標題格式：【訂房|房型】姓名 人數，例：【訂房|和室】陳美惠 2大1國小
 // 回傳 { ok: true, booked: { 房型: [日期...], ... } }
@@ -119,8 +146,9 @@ function getAvailability(from, to) {
   const events = calendar().getEvents(new Date(from), new Date(to + 'T23:59:59'));
   const booked = {};
   events.forEach(ev => {
-    // 只看【訂房|房型】格式的事件，避免日曆上的私人行程被誤判成客滿
-    const m = ev.getTitle().match(/^【訂房\|([^】]+)】/);
+    // 看【訂房|房型】與【關房|房型】格式的事件（關房 = 管理者臨時封房，
+    // 例如維修週在日曆建「【關房|和室】」整日事件即可），其他私人行程不受影響
+    const m = ev.getTitle().match(/^【(?:訂房|關房)\|([^】]+)】/);
     if (!m) return;
     const room = m[1];
     // 事件每跨一晚就標成已訂；退房日早上不佔房

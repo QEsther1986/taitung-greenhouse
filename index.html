@@ -559,6 +559,16 @@
       return res.json();
     }
 
+    // 房型開放狀態（管理者在試算表「房型設定」分頁切換開放/關閉）
+    async function apiGetRooms() {
+      if (!CONFIG.API_URL) {                       // 展示模式：示範一間暫停開放
+        await new Promise(r => setTimeout(r, 200));
+        return { ok: true, closed: ['雙人房・兩單床'] };
+      }
+      const res = await fetch(`${CONFIG.API_URL}?action=getRooms`);
+      return res.json();
+    }
+
     async function apiSubmitBooking(payload) {
       if (!CONFIG.API_URL) {                       // 展示模式
         await new Promise(r => setTimeout(r, 800));
@@ -740,10 +750,26 @@
     };
     const regularRooms = () => CONFIG.ROOMS.filter(r => !r.flat);
 
+    // 管理者關閉的房型（來自試算表「房型設定」分頁）
+    let closedRooms = new Set();
+    let roomsLoaded = false;
+    const isClosed = id => closedRooms.has(id);
+    const openRegularRooms = () => regularRooms().filter(r => !isClosed(r.id));
+    // 包棟需五間房都開放才提供
+    const wholeHouseOffered = () => !isClosed('包棟') && regularRooms().every(r => !isClosed(r.id));
+
     // 會員 8 折資格：已登入且會費已開通
     const memberDiscountActive = () => !!(currentMember && currentMember.status === '已開通');
 
-    function initBookingPage() {
+    async function initBookingPage() {
+      if (!roomsLoaded) {
+        try {
+          const resp = await apiGetRooms();
+          if (resp.ok) closedRooms = new Set(resp.closed || []);
+        } catch { /* 讀取失敗時視為全部開放，管家後續仍會把關 */ }
+        roomsLoaded = true;
+        if (cal.roomId && isClosed(cal.roomId)) cal.roomId = null;
+      }
       // 身分提示條
       const isMember = memberDiscountActive();
       document.getElementById('strip-member').classList.toggle('hidden', !isMember);
@@ -804,11 +830,13 @@
       return has(roomId);
     }
 
-    // 該晚是否「整棟全滿」（月曆上直接劃掉）
+    // 該晚是否「整棟全滿」（月曆上直接劃掉）：只看仍開放的房型
     function isBooked(iso) {
       const m = cal.booked[iso.slice(0, 7)] || {};
       const has = r => m[r] && m[r].has(iso);
-      return has('包棟') || regularRooms().every(r => has(r.id));
+      const open = openRegularRooms();
+      if (open.length === 0 && !wholeHouseOffered()) return true;   // 全部暫停開放
+      return has('包棟') || (open.length > 0 && open.every(r => has(r.id)));
     }
 
     // 已選區間內，這間房是否每晚都有空
@@ -900,11 +928,16 @@
       const hasDates = !!(cal.start && cal.end);
 
       for (const room of CONFIG.ROOMS) {
-        const free = roomFreeForRange(room.id);
+        // 管理者關閉的房型；包棟需五間房都開放才提供
+        const closed = isClosed(room.id) || (room.flat && !wholeHouseOffered());
+        const free = !closed && roomFreeForRange(room.id);
         const selected = cal.roomId === room.id;
         const priceTag = room.flat
           ? `<b class="font-serif text-wood tabular shrink-0">${fmtMoney(CONFIG.PRICING.wholeNight)}<i class="not-italic text-xs text-soil font-normal">/晚</i></b>`
           : `<i class="not-italic text-xs text-soil shrink-0">按人頭計費</i>`;
+        const statusTag = closed
+          ? '<i class="not-italic text-xs text-soil shrink-0 px-1.5 py-0.5 rounded bg-sand border border-line">暫停開放</i>'
+          : '<i class="not-italic text-xs text-red-500 shrink-0">此區間已被預訂</i>';
 
         const label = document.createElement('label');
         label.className = 'room-card flex items-center gap-3 rounded-xl border px-4 py-3 transition ' +
@@ -918,7 +951,7 @@
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline justify-between gap-2">
               <b class="font-medium">${room.id}<i class="not-italic text-[10px] text-soil font-normal ml-1.5 px-1.5 py-0.5 rounded bg-sand border border-line align-middle">${room.floor}</i></b>
-              ${free ? priceTag : '<i class="not-italic text-xs text-red-500 shrink-0">此區間已被預訂</i>'}
+              ${free ? priceTag : statusTag}
             </span>
             <span class="block text-xs text-soil mt-0.5">${room.desc}・${room.cap}</span>
           </span>`;
