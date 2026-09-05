@@ -822,14 +822,44 @@
       empty.classList.toggle('hidden', records.length > 0);
       for (const r of records) {
         const li = document.createElement('li');
-        li.className = 'py-3 flex items-center justify-between gap-3';
+        li.className = 'py-3';
+        const canCancel = r.status === '待確認';
+
         li.innerHTML = `
-          <div class="min-w-0">
-            <p class="font-medium text-sm">${r.checkIn} → ${r.checkOut}</p>
-            <p class="text-xs text-soil mt-0.5">${r.party}・扣款 ${fmtMoney(r.amount)} 元</p>
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="font-medium text-sm">${r.checkIn} → ${r.checkOut}</p>
+              <p class="text-xs text-soil mt-0.5">${r.party}・扣款 ${fmtMoney(r.amount)} 元</p>
+            </div>
+            <span class="shrink-0 text-xs px-2 py-1 rounded-full ${r.status === '已確認' ? 'bg-mossBg text-moss' : r.status === '已取消' ? 'bg-line text-soil line-through' : 'bg-sand text-soil'}">${r.status}</span>
           </div>
-          <span class="shrink-0 text-xs px-2 py-1 rounded-full ${r.status === '已確認' ? 'bg-mossBg text-moss' : 'bg-sand text-soil'}">${r.status}</span>`;
+          ${canCancel ? `
+            <div class="mt-2 text-right">
+              <button onclick="cancelRecord('${r.id}', ${r.amount})"
+                      class="text-xs px-3 py-1.5 rounded-lg border border-red-300 text-red-600 font-medium active:bg-red-50 transition">
+                取消訂房
+              </button>
+            </div>` : ''}`;
         list.appendChild(li);
+      }
+    }
+
+    async function cancelRecord(id, amount) {
+      if (!confirm(`確定取消這筆訂房嗎?\n房費 ${fmtMoney(amount)} 元將全額退回您的儲值餘額。`)) return;
+      const phone = localStorage.getItem('memberPhone') || '';
+      try {
+        const resp = await apiCancelBooking({ id, phone });
+        if (resp.ok) {
+          if (currentMember && resp.balanceAfter != null) currentMember.balance = resp.balanceAfter;
+          const p = localStorage.getItem('memberPhone');
+          const fresh = await apiGetMember(p);        // 重抓最新資料,刷新畫面
+          if (fresh.ok) renderMember(fresh.member);
+          alert('訂房已取消,房費已退回儲值餘額。');
+        } else {
+          alert(resp.message || '取消失敗,請稍後再試或聯繫管家。');
+        }
+      } catch {
+        alert('連線失敗,請稍後再試。');
       }
     }
 
@@ -921,6 +951,19 @@
       updateBookingSummary();
     }
 
+    async function apiCancelBooking(payload) {
+      if (!CONFIG.API_URL) {                       // 展示模式
+        await new Promise(r => setTimeout(r, 600));
+        return { ok: true, balanceAfter: 0 };
+      }
+      const res = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'cancelBooking', data: payload }),
+      });
+      return res.json();
+    }
+    
     function resetBooking() {
       cal.start = cal.end = null; cal.roomId = null; cal.year = 0;
       document.getElementById('booking-success').classList.add('hidden');
